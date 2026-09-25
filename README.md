@@ -14,3 +14,11 @@ SaaS de precificação, custos, margem de contribuição, DRE e análise tribut�
 
 ## Observação fiscal
 CNAE, NCM, UF, município, substituição tributária, monofásico, retenções e benefícios fiscais podem alterar a tributação. Valide os parâmetros com a contabilidade antes de uso fiscal.
+
+
+## Backend Supabase
+O frontend usa as variáveis `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+O banco é multiempresa, usa RLS e possui onboarding por RPC para criar empresa + administrador de forma atômica.
+
+## Segurança
+As tabelas tributárias compartilhadas são somente leitura para usuários autenticados. Dados operacionais são isolados por `company_id`.
