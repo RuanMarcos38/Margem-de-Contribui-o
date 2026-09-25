@@ -1,10 +1,8 @@
 import {createClient} from '@supabase/supabase-js';
 
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vtlorjxornqrbaemixvn.supabase.co';
+const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_LeWBBBBG1lsEt_hDy6D3Fg_OwiD9GQg';
 
-if(!url||!key){
-  console.warn('Supabase environment variables are not configured.');
-}
-
-export const supabase=createClient(url||'https://placeholder.supabase.co',key||'placeholder');
+export const supabase=createClient(url,key,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+});
