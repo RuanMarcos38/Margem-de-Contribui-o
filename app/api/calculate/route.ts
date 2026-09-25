@@ -1,0 +1,1 @@
+import {NextResponse} from 'next/server';import {calculatePricing} from '@/lib/finance';export async function POST(req:Request){try{return NextResponse.json(calculatePricing(await req.json()))}catch{return NextResponse.json({ok:false,error:'Entrada inválida para o cálculo.'},{status:400})}}
