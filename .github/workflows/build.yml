@@ -17,3 +17,21 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://vtlorjxornqrbaemixvn.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_LeWBBBBG1lsEt_hDy6D3Fg_OwiD9GQg
+      - name: Runtime smoke test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://vtlorjxornqrbaemixvn.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_LeWBBBBG1lsEt_hDy6D3Fg_OwiD9GQg
+        run: |
+          npm start > /tmp/margem-app.log 2>&1 &
+          APP_PID=$!
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/api/health > /tmp/health.json; then
+              break
+            fi
+            sleep 1
+          done
+          cat /tmp/health.json
+          curl -fsS http://127.0.0.1:3000/ > /tmp/root.html
+          curl -fsS -X POST http://127.0.0.1:3000/api/calculate             -H 'content-type: application/json'             -d '{"baseCost":10,"quantity":100,"salesTaxPct":6,"cardPct":3,"commissionPct":2,"fixedCostAllocationPct":10,"desiredMarginPct":20}'             > /tmp/calc.json
+          node -e "const x=require('/tmp/calc.json'); if(!x.ok || !(x.price>0) || !(x.contribution>0)) process.exit(1); console.log(x)"
+          kill $APP_PID
