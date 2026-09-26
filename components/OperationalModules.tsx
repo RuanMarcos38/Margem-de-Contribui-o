@@ -126,10 +126,14 @@ export function CompanyModule({company}:{company:any}){
 }
 
 export function UsersModule({companyId}:{companyId:string}){
- const[rows,setRows]=useState<any[]>([]);
+ const[rows,setRows]=useState<any[]>([]),[email,setEmail]=useState(''),[role,setRole]=useState('visualizacao'),[busy,setBusy]=useState(false);
  useEffect(()=>{load()},[companyId]);
  async function load(){const{data:m}=await supabase.from('memberships').select('*').eq('company_id',companyId);const ids=(m||[]).map(x=>x.user_id);const{data:p}=ids.length?await supabase.from('profiles').select('id,full_name,job_title,status').in('id',ids):{data:[] as any[]};setRows((m||[]).map(x=>({...x,profile:(p||[]).find(y=>y.id===x.user_id)})))}
- return <ModuleShell title='Usuários' subtitle='Usuários vinculados à empresa e seus níveis de acesso.'><Table headers={['Usuário','Função','Status']} rows={rows.map(r=>[r.profile?.full_name||r.user_id,r.role,r.profile?.status||'active'])}/></ModuleShell>
+ async function invite(e:any){e.preventDefault();setBusy(true);const{data,error}=await supabase.functions.invoke('invite-company-user',{body:{company_id:companyId,email,role}});setBusy(false);if(error)return alert(error.message);if(!data?.ok)return alert(data?.error||'Falha ao convidar usuário.');alert('Convite enviado.');setEmail('');setRole('visualizacao');load()}
+ return <ModuleShell title='Usuários' subtitle='Usuários vinculados à empresa e seus níveis de acesso.'>
+  <form className='card inlineForm' onSubmit={invite}><b>Convidar usuário</b><input type='email' placeholder='email@empresa.com' value={email} onChange={e=>setEmail(e.target.value)} required/><select value={role} onChange={e=>setRole(e.target.value)}><option value='admin'>Administrador</option><option value='contador'>Contador</option><option value='financeiro'>Financeiro</option><option value='comercial'>Comercial</option><option value='visualizacao'>Visualização</option></select><button className='blueBtn' disabled={busy}><Plus size={15}/>{busy?'Enviando...':'Convidar'}</button></form>
+  <Table headers={['Usuário','Função','Status']} rows={rows.map(r=>[r.profile?.full_name||r.user_id,r.role,r.profile?.status||'active'])}/>
+ </ModuleShell>
 }
 
 export function SettingsModule({company}:{company:any}){
