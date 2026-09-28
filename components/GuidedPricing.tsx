@@ -103,8 +103,8 @@ export default function GuidedPricing({companyId,userId}:{companyId:string;userI
    const input_data={mode:'guided-6-steps',product_id:selectedProduct,production,target_monthly_profit:targetMonthlyProfit,params,direct_cost:directCost||n(selected?.base_cost),fixed_total:fixedTotal};
    const{data:s,error}=await supabase.from('pricing_scenarios').insert({company_id:companyId,product_id:selectedProduct,name:'Guiado '+(selected?.name||'Produto')+' '+new Date().toLocaleString('pt-BR'),input_data,created_by:userId}).select().single();
    if(error)return alert(error.message);
-   const{error:e2}=await supabase.from('pricing_results').insert({company_id:companyId,scenario_id:s.id,result_data:priceResult,calculation_memory:['Método divisor','Perdas por rendimento: custo/(1-perda)','Rateio fixo: custos fixos/produção mensal estimada','Margem de contribuição: preço - custo ajustado - despesas variáveis','Ponto de equilíbrio: custos fixos / MC%','Faturamento da meta: (custos fixos + lucro desejado) / MC%','Desconto máximo: (preço recomendado - preço mínimo) / preço recomendado'],engine_version:'guided-1.1.0'});
-   if(!e2)await supabase.from('products').update({sale_price:priceResult.recommended_price}).eq('id',selectedProduct);
+   const{error:e2}=await supabase.from('pricing_results').insert({company_id:companyId,scenario_id:s.id,result_data:priceResult,calculation_memory:['Método divisor','Perdas por rendimento: custo/(1-perda)','Rateio fixo: custos fixos/produção mensal estimada','Margem de contribuição: preço - custo ajustado - despesas variáveis','Ponto de equilíbrio: custos fixos / MC%','Faturamento da meta: (custos fixos + lucro desejado) / MC%','Desconto máximo: (preço recomendado - preço mínimo) / preço recomendado'],engine_version:priceResult.calculation_version||'guided-1.0.0'});
+   if(!e2)await supabase.from('products').update({sale_price:priceResult.recommended_price,base_cost:priceResult.adjusted_direct_cost}).eq('id',selectedProduct);
    alert(e2?e2.message:'Preço salvo no produto.');
    loadAll();
  }
