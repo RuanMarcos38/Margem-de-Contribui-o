@@ -14,20 +14,38 @@ const brl=(v:number)=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}
 const chart=[{m:'Abr',r:62000,c:39100},{m:'Mai',r:68400,c:42500},{m:'Jun',r:71200,c:43700},{m:'Jul',r:76900,c:45800},{m:'Ago',r:81200,c:47800},{m:'Set',r:86400,c:49500}];
 
 export default function Home(){
- const[session,setSession]=useState<any>(null),[loading,setLoading]=useState(true),[membership,setMembership]=useState<any>(null);
+ const[session,setSession]=useState<any>(null),[loading,setLoading]=useState(true),[membership,setMembership]=useState<any>(null),[profile,setProfile]=useState<any>(undefined);
  useEffect(()=>{supabase.auth.getSession().then(({data})=>{setSession(data.session);setLoading(false)});const{data}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s));return()=>data.subscription.unsubscribe()},[]);
- useEffect(()=>{if(session)loadCompany();else setMembership(null)},[session]);
+ useEffect(()=>{if(session){setProfile(undefined);loadAccess()}else{setProfile(undefined);setMembership(null)}},[session?.user?.id]);
+ async function loadAccess(){
+  const{data,error}=await supabase.from('profiles').select('id,status,approval_status').eq('id',session.user.id).maybeSingle();
+  if(error){setProfile(null);setMembership(null);return}
+  setProfile(data||null);
+  if(data?.status==='active'&&data?.approval_status==='approved')await loadCompany();
+  else setMembership(null);
+ }
  async function loadCompany(){const{data}=await supabase.from('memberships').select('company_id,role,companies(id,name,legal_name,tax_id,state_code,city)').eq('user_id',session.user.id).limit(1);setMembership(data?.[0]||null)}
  if(loading)return <div className='centerPage'><LoaderCircle className='spin'/><b>Carregando...</b></div>;
  if(!session)return <Auth/>;
+ if(profile===undefined)return <div className='centerPage'><LoaderCircle className='spin'/><b>Validando acesso...</b></div>;
+ if(!profile)return <ApprovalGate status='error' refresh={loadAccess}/>;
+ if(profile.status!=='active'||profile.approval_status!=='approved')return <ApprovalGate status={profile.approval_status==='approved'?profile.status:profile.approval_status} refresh={loadAccess}/>;
  if(!membership)return <Onboarding done={loadCompany}/>;
  return <Workspace session={session} membership={membership}/>;
 }
 
 function Auth(){
  const[mode,setMode]=useState<'login'|'signup'>('login'),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[name,setName]=useState(''),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);
- async function submit(e:any){e.preventDefault();setBusy(true);setMsg('');if(mode==='signup'){const{error}=await supabase.auth.signUp({email,password,options:{data:{full_name:name},emailRedirectTo:'https://custo.rrestrategiaperformance.com.br/'}});setMsg(error?.message||'Conta criada. Verifique seu e-mail caso a confirmação esteja ativa.')}else{const{error}=await supabase.auth.signInWithPassword({email,password});if(error)setMsg(error.message)}setBusy(false)}
+ async function submit(e:any){e.preventDefault();setBusy(true);setMsg('');if(mode==='signup'){const{error}=await supabase.auth.signUp({email,password,options:{data:{full_name:name},emailRedirectTo:'https://custo.rrestrategiaperformance.com.br/'}});setMsg(error?.message||'Cadastro recebido. Após confirmar o e-mail, aguarde a aprovação do Administrador Master para acessar a ferramenta.')}else{const{error}=await supabase.auth.signInWithPassword({email,password});if(error)setMsg(error.message)}setBusy(false)}
  return <div className='authPage'><div className='authIntro'><div className='brandIcon'><BarChart3/></div><h1>Margem de Contribuição</h1><p>Precificação, custos, lucro, DRE e tributação em um único SaaS.</p></div><form className='authCard' onSubmit={submit}><h2>{mode==='login'?'Entrar':'Criar conta'}</h2>{mode==='signup'&&<label>Nome<input value={name} onChange={e=>setName(e.target.value)} required/></label>}<label>E-mail<input type='email' value={email} onChange={e=>setEmail(e.target.value)} required/></label><label>Senha<input type='password' minLength={6} value={password} onChange={e=>setPassword(e.target.value)} required/></label>{msg&&<div className='msg'>{msg}</div>}<button className='submitBtn' disabled={busy}>{busy?'Processando...':mode==='login'?'Entrar':'Cadastrar'}</button><button type='button' className='linkBtn' onClick={()=>setMode(mode==='login'?'signup':'login')}>{mode==='login'?'Criar uma conta':'Já tenho conta'}</button></form></div>
+}
+
+function ApprovalGate({status,refresh}:{status:string;refresh:()=>Promise<void>}){
+ const[busy,setBusy]=useState(false);
+ const blocked=status==='blocked'||status==='inactive';
+ const failed=status==='error';
+ async function check(){setBusy(true);await refresh();setBusy(false)}
+ return <div className='authPage'><div className='authIntro'><ShieldCheck size={44}/><h1>{failed?'Não foi possível validar o acesso':blocked?'Acesso bloqueado':'Cadastro aguardando aprovação'}</h1><p>{failed?'Tente validar novamente. Se o problema continuar, contate o administrador.':blocked?'Seu acesso foi bloqueado pelo Administrador Master.':'Seu cadastro foi recebido e ainda precisa ser liberado pelo Administrador Master antes de entrar na ferramenta.'}</p></div><div className='authCard'><h2>Status do acesso</h2><div className='msg'>{failed?'Falha na validação':blocked?'Bloqueado':'Pendente de aprovação'}</div><button className='submitBtn' onClick={check} disabled={busy}>{busy?'Verificando...':'Verificar liberação'}</button><button type='button' className='linkBtn' onClick={()=>supabase.auth.signOut()}>Sair</button></div></div>
 }
 
 function Onboarding({done}:{done:()=>void}){
@@ -61,7 +79,7 @@ function Workspace({session,membership}:{session:any,membership:any}){
  {section==='Canais de Venda'&&<ChannelsModule companyId={companyId}/>} 
  {section==='Relatórios'&&<ReportsModule companyId={companyId}/>} 
  {section==='Empresas'&&<CompanyModule company={company}/>} 
- {section==='Usuários'&&<UsersModule companyId={companyId}/>} 
+ {section==='Usuários'&&<UsersModule companyId={companyId} isMaster={membership.role==='super_admin'}/>} 
  {section==='Configurações'&&<SettingsModule company={company}/>}
  </section></main></div>
 }
