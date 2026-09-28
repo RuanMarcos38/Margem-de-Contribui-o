@@ -142,6 +142,27 @@ $$;
 revoke all on function public.create_company_with_admin(text,text,text,text,text) from public, anon;
 grant execute on function public.create_company_with_admin(text,text,text,text,text) to authenticated, service_role;
 
+alter policy companies_select on public.companies to authenticated;
+alter policy companies_update on public.companies to authenticated;
+alter policy companies_delete on public.companies to authenticated;
+alter policy company_fiscal_verifications_tenant on public.company_fiscal_verifications to authenticated;
+alter policy company_tax_profiles_tenant on public.company_tax_profiles to authenticated;
+alter policy cost_categories_tenant on public.cost_categories to authenticated;
+alter policy decision_engine_runs_tenant on public.decision_engine_runs to authenticated;
+alter policy dre_periods_tenant on public.dre_periods to authenticated;
+alter policy fixed_costs_tenant on public.fixed_costs to authenticated;
+alter policy monthly_results_tenant on public.monthly_results to authenticated;
+alter policy order_simulations_tenant on public.order_simulations to authenticated;
+alter policy payment_methods_tenant on public.payment_methods to authenticated;
+alter policy pricing_parameters_tenant on public.pricing_parameters to authenticated;
+alter policy pricing_results_tenant on public.pricing_results to authenticated;
+alter policy pricing_scenarios_tenant on public.pricing_scenarios to authenticated;
+alter policy product_components_tenant on public.product_components to authenticated;
+alter policy products_tenant on public.products to authenticated;
+alter policy sales_channels_tenant on public.sales_channels to authenticated;
+alter policy variable_costs_tenant on public.variable_costs to authenticated;
+alter policy audit_logs_select on public.audit_logs to authenticated;
+
 drop policy if exists memberships_manage on public.memberships;
 drop policy if exists memberships_select on public.memberships;
 drop policy if exists memberships_insert on public.memberships;
