@@ -22,7 +22,7 @@ export default function GuidedPricing({companyId,userId}:{companyId:string;userI
  const[selectedProduct,setSelectedProduct]=useState('');
  const[components,setComponents]=useState<any[]>([]);
  const[componentForm,setComponentForm]=useState({name:'',quantity:1,unit_cost:0,waste_pct:0});
- const[production,setProduction]=useState(100);
+ const[production,setProduction]=useState(100);\n const[targetMonthlyProfit,setTargetMonthlyProfit]=useState(0);
  const[priceResult,setPriceResult]=useState<any>(null);
  const[monthQty,setMonthQty]=useState<Record<string,number>>({});
  const[monthResult,setMonthResult]=useState<any>(null);
@@ -98,10 +98,10 @@ export default function GuidedPricing({companyId,userId}:{companyId:string;userI
 
  async function savePrice(){
    if(!priceResult?.ok)return;
-   const input_data={mode:'guided-6-steps',product_id:selectedProduct,production,params,direct_cost:directCost||n(selected?.base_cost),fixed_total:fixedTotal};
+   const input_data={mode:'guided-6-steps',product_id:selectedProduct,production,target_monthly_profit:targetMonthlyProfit,params,direct_cost:directCost||n(selected?.base_cost),fixed_total:fixedTotal};
    const{data:s,error}=await supabase.from('pricing_scenarios').insert({company_id:companyId,product_id:selectedProduct,name:'Guiado '+(selected?.name||'Produto')+' '+new Date().toLocaleString('pt-BR'),input_data,created_by:userId}).select().single();
    if(error)return alert(error.message);
-   const{error:e2}=await supabase.from('pricing_results').insert({company_id:companyId,scenario_id:s.id,result_data:priceResult,calculation_memory:['Método divisor','Perdas por rendimento: custo/(1-perda)','Rateio fixo: custos fixos/produção mensal estimada'],engine_version:'guided-1.0.0'});
+   const{error:e2}=await supabase.from('pricing_results').insert({company_id:companyId,scenario_id:s.id,result_data:priceResult,calculation_memory:['Método divisor','Perdas por rendimento: custo/(1-perda)','Rateio fixo: custos fixos/produção mensal estimada','Margem de contribuição: preço - custo ajustado - despesas variáveis','Ponto de equilíbrio: custos fixos / MC%','Faturamento da meta: (custos fixos + lucro desejado) / MC%','Desconto máximo: (preço recomendado - preço mínimo) / preço recomendado'],engine_version:'guided-1.1.0'});
    if(!e2)await supabase.from('products').update({sale_price:priceResult.recommended_price}).eq('id',selectedProduct);
    alert(e2?e2.message:'Preço salvo no produto.');
    loadAll();
@@ -159,7 +159,7 @@ export default function GuidedPricing({companyId,userId}:{companyId:string;userI
      <div className='cardTitle'><div><b>Custos Fixos</b><span>Total atual: {brl(fixedTotal)}</span></div></div>
      <form className='guidedInline' onSubmit={addFixed}><input className='userInputField' placeholder='Ex.: aluguel' value={fixedForm.name} onChange={e=>setFixedForm({...fixedForm,name:e.target.value})} required/><input className='userInputField' type='number' step='.01' placeholder='Valor mensal' value={fixedForm.monthly_amount} onChange={e=>setFixedForm({...fixedForm,monthly_amount:n(e.target.value)})}/><button className='blueBtn'><Plus size={15}/>Adicionar</button></form>
      <div className='tableCard'><table><thead><tr><th>Despesa</th><th>Mensal</th><th></th></tr></thead><tbody>{fixed.map(x=><tr key={x.id}><td>{x.name}</td><td>{brl(x.monthly_amount)}</td><td><button className='dangerIcon' onClick={()=>deleteFixed(x.id)}><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
-     <div className='simpleGrid oneRow'><label className='userInput'><span>Produção mensal estimada</span><input type='number' value={production} onChange={e=>setProduction(n(e.target.value))}/><small>Rateio atual: {brl(production>0?fixedTotal/production:0)} por unidade.</small></label></div>
+     <div className='simpleGrid'><label className='userInput'><span>Produção mensal estimada</span><input type='number' value={production} onChange={e=>setProduction(n(e.target.value))}/><small>Rateio atual: {brl(production>0?fixedTotal/production:0)} por unidade.</small></label><label className='userInput'><span>Lucro mensal desejado</span><input type='number' step='.01' value={targetMonthlyProfit} onChange={e=>setTargetMonthlyProfit(n(e.target.value))}/><small>Usado para calcular automaticamente o faturamento necessário para atingir a meta.</small></label></div>
      <button className='secondaryBtn' onClick={()=>setStep(4)}>Próximo</button>
    </div>}
 
