@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
-import {CheckCircle2,Plus,Save,Trash2,TriangleAlert} from 'lucide-react';
+import {Ban,CheckCircle2,Plus,Save,ShieldCheck,Trash2,TriangleAlert} from 'lucide-react';
 import {supabase} from '@/lib/supabase';
 
 const brl=(v:number)=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -125,14 +125,43 @@ export function CompanyModule({company}:{company:any}){
  return <ModuleShell title='Empresa' subtitle='Dados usados pelo restante do sistema.'><form className='card formGrid' onSubmit={save}>{Object.entries({name:'Nome',legal_name:'Razão social',tax_id:'CNPJ/CPF',state_code:'UF',city:'Cidade'}).map(([k,l])=><label key={k}><span>{l}</span><input value={(f as any)[k]} onChange={e=>setF({...f,[k]:e.target.value})}/></label>)}<div className='formAction'><button className='blueBtn'><Save size={15}/>Salvar empresa</button></div></form></ModuleShell>
 }
 
-export function UsersModule({companyId}:{companyId:string}){
- const[rows,setRows]=useState<any[]>([]),[email,setEmail]=useState(''),[role,setRole]=useState('visualizacao'),[busy,setBusy]=useState(false);
- useEffect(()=>{load()},[companyId]);
- async function load(){const{data:m}=await supabase.from('memberships').select('*').eq('company_id',companyId);const ids=(m||[]).map(x=>x.user_id);const{data:p}=ids.length?await supabase.from('profiles').select('id,full_name,job_title,status').in('id',ids):{data:[] as any[]};setRows((m||[]).map(x=>({...x,profile:(p||[]).find(y=>y.id===x.user_id)})))}
- async function invite(e:any){e.preventDefault();setBusy(true);const{data,error}=await supabase.functions.invoke('invite-company-user',{body:{company_id:companyId,email,role}});setBusy(false);if(error)return alert(error.message);if(!data?.ok)return alert(data?.error||'Falha ao convidar usuário.');alert('Convite enviado.');setEmail('');setRole('visualizacao');load()}
- return <ModuleShell title='Usuários' subtitle='Usuários vinculados à empresa e seus níveis de acesso.'>
+export function UsersModule({companyId,isMaster=false}:{companyId:string;isMaster?:boolean}){
+ const[rows,setRows]=useState<any[]>([]),[approvals,setApprovals]=useState<any[]>([]),[email,setEmail]=useState(''),[role,setRole]=useState('visualizacao'),[busy,setBusy]=useState(false),[actionUser,setActionUser]=useState('');
+ useEffect(()=>{load()},[companyId,isMaster]);
+ async function load(){
+  const{data:m}=await supabase.from('memberships').select('*').eq('company_id',companyId);
+  const ids=(m||[]).map(x=>x.user_id);
+  const{data:p}=ids.length?await supabase.from('profiles').select('id,full_name,job_title,status,approval_status').in('id',ids):{data:[] as any[]};
+  setRows((m||[]).map(x=>({...x,profile:(p||[]).find(y=>y.id===x.user_id)})));
+  if(isMaster){
+   const{data,error}=await supabase.rpc('list_user_approvals');
+   if(error)console.error(error);
+   setApprovals(data||[]);
+  }else setApprovals([]);
+ }
+ async function setApproval(userId:string,status:'approved'|'blocked'){
+  setActionUser(userId);
+  const{error}=await supabase.rpc('set_user_approval',{target_user:userId,p_status:status});
+  setActionUser('');
+  if(error)return alert(error.message);
+  await load();
+ }
+ async function invite(e:any){e.preventDefault();setBusy(true);const{data,error}=await supabase.functions.invoke('invite-company-user',{body:{company_id:companyId,email,role}});setBusy(false);if(error)return alert(error.message);if(!data?.ok)return alert(data?.error||'Falha ao convidar usuário.');alert('Convite enviado. O usuário ainda precisará da aprovação do Administrador Master para acessar.');setEmail('');setRole('visualizacao');load()}
+ const label=(s:string)=>s==='approved'?'Aprovado':s==='blocked'?'Bloqueado':'Pendente';
+ return <ModuleShell title='Usuários' subtitle={isMaster?'Gerencie os usuários da empresa e autorize novos cadastros da plataforma.':'Usuários vinculados à empresa e seus níveis de acesso.'}>
+  {isMaster&&<><div className='notice'><ShieldCheck size={18}/><span>Administrador Master: novos cadastros não acessam a ferramenta até serem aprovados aqui.</span></div>
+  <Table headers={['Cadastro','E-mail','Perfil','Status','Ações']} rows={approvals.map(r=>[
+   new Date(r.created_at).toLocaleString('pt-BR'),
+   r.email||'—',
+   r.full_name||'Sem nome',
+   label(r.approval_status),
+   <div className='simpleActions'>
+    {r.approval_status!=='approved'&&<button className='blueBtn' disabled={actionUser===r.user_id} onClick={()=>setApproval(r.user_id,'approved')}><CheckCircle2 size={14}/>{actionUser===r.user_id?'Processando...':'Aprovar'}</button>}
+    {r.approval_status!=='blocked'&&<button className='dangerIcon' disabled={actionUser===r.user_id} onClick={()=>setApproval(r.user_id,'blocked')}><Ban size={14}/>Bloquear</button>}
+   </div>
+  ])}/></>}
   <form className='card inlineForm' onSubmit={invite}><b>Convidar usuário</b><input type='email' placeholder='email@empresa.com' value={email} onChange={e=>setEmail(e.target.value)} required/><select value={role} onChange={e=>setRole(e.target.value)}><option value='admin'>Administrador</option><option value='contador'>Contador</option><option value='financeiro'>Financeiro</option><option value='comercial'>Comercial</option><option value='visualizacao'>Visualização</option></select><button className='blueBtn' disabled={busy}><Plus size={15}/>{busy?'Enviando...':'Convidar'}</button></form>
-  <Table headers={['Usuário','Função','Status']} rows={rows.map(r=>[r.profile?.full_name||r.user_id,r.role,r.profile?.status||'active'])}/>
+  <Table headers={['Usuário','Função','Status de conta','Aprovação']} rows={rows.map(r=>[r.profile?.full_name||r.user_id,r.role,r.profile?.status||'active',label(r.profile?.approval_status||'pending')])}/>
  </ModuleShell>
 }
 
