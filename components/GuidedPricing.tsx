@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import {BookOpen,Calculator,CheckCircle2,Factory,LineChart,Package,Plus,ReceiptText,Save,Trash2,TriangleAlert} from 'lucide-react';
 import {supabase} from '@/lib/supabase';
+import PricingMetrics from '@/components/PricingMetrics';
 
 const brl=(v:number)=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const n=(v:any)=>Number(v||0);
@@ -190,6 +191,19 @@ export default function GuidedPricing({companyId,userId}:{companyId:string;userI
          <div><span>Fixo por unidade</span><b>{brl(priceResult.fixed_cost_per_unit)}</b><small>Rateio pela produção estimada.</small></div>
          <div><span>Margem de contribuição</span><b>{priceResult.contribution_margin_pct}%</b><small>{brl(priceResult.contribution_margin_unit)} por unidade.</small></div>
        </div>
+       <div className='automaticMetricsTitle'><b>Indicadores calculados automaticamente</b><span>Os valores abaixo são atualizados a partir dos custos, taxas, margem e volume informados.</span></div>
+       <PricingMetrics
+         priceResult={priceResult}
+         taxPct={params.taxPct}
+         cardPct={params.cardPct}
+         commissionPct={params.commissionPct}
+         otherFeesPct={params.otherFeesPct}
+         directCost={directCost||n(selected?.base_cost)}
+         lossPct={params.lossPct}
+         production={production}
+         fixedTotal={fixedTotal}
+         targetMonthlyProfit={targetMonthlyProfit}
+       />
        <div className='simpleActions'><button className='secondaryBtn' onClick={savePrice}><Save size={15}/>Salvar preço</button><button className='blueBtn' onClick={()=>setStep(6)}>Ver resultado do mês</button></div>
      </div>)}
    </div>}
