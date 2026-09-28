@@ -23,7 +23,8 @@ export default function GuidedPricing({companyId,userId}:{companyId:string;userI
  const[selectedProduct,setSelectedProduct]=useState('');
  const[components,setComponents]=useState<any[]>([]);
  const[componentForm,setComponentForm]=useState({name:'',quantity:1,unit_cost:0,waste_pct:0});
- const[production,setProduction]=useState(100);\n const[targetMonthlyProfit,setTargetMonthlyProfit]=useState(0);
+ const[production,setProduction]=useState(100);
+ const[targetMonthlyProfit,setTargetMonthlyProfit]=useState(0);
  const[priceResult,setPriceResult]=useState<any>(null);
  const[monthQty,setMonthQty]=useState<Record<string,number>>({});
  const[monthResult,setMonthResult]=useState<any>(null);
