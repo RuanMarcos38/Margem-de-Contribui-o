@@ -156,12 +156,14 @@ export function UsersModule({companyId,currentRole='visualizacao'}:{companyId:st
  }
  async function invite(e:any){e.preventDefault();setBusy(true);const{data,error}=await supabase.functions.invoke('invite-company-user',{body:{company_id:companyId,email,role}});setBusy(false);if(error)return alert(error.message);if(!data?.ok)return alert(data?.error||'Falha ao convidar usuário.');alert(data?.message||'Convite processado. O usuário precisará ser aprovado antes de acessar.');setEmail('');setRole('visualizacao');load()}
  const label=(s:string)=>s==='approved'?'Aprovado':s==='blocked'?'Bloqueado':'Pendente';
+ const roleLabel=(r:any)=>Array.isArray(r?.roles)&&r.roles.length?r.roles.join(', '):'—';
  return <ModuleShell title='Usuários' subtitle={canApprove?'Gerencie os usuários da empresa e aprove os convidados antes do acesso.':'Usuários vinculados à empresa e seus níveis de acesso.'}>
   {canApprove&&<><div className='notice'><ShieldCheck size={18}/><span>{isMaster?'Administrador Master: aprove ou bloqueie os cadastros da plataforma.':'Administrador: aprove ou bloqueie os usuários convidados desta empresa.'}</span></div>
-  <Table headers={['Cadastro','E-mail','Perfil','Status','Ações']} rows={approvals.map(r=>[
+  <Table headers={['Cadastro','E-mail','Usuário','Função','Status','Ações']} rows={approvals.map(r=>[
    new Date(r.created_at).toLocaleString('pt-BR'),
    r.email||'—',
    r.full_name||'Sem nome',
+   roleLabel(r),
    label(r.approval_status),
    <div className='simpleActions'>
     {r.approval_status!=='approved'&&<button className='blueBtn' disabled={actionUser===r.user_id} onClick={()=>setApproval(r.user_id,'approved')}><CheckCircle2 size={14}/>{actionUser===r.user_id?'Processando...':'Aprovar'}</button>}
@@ -169,7 +171,7 @@ export function UsersModule({companyId,currentRole='visualizacao'}:{companyId:st
    </div>
   ])}/></>}
   <form className='card inlineForm' onSubmit={invite}><b>Convidar usuário</b><input type='email' placeholder='email@empresa.com' value={email} onChange={e=>setEmail(e.target.value)} required/><select value={role} onChange={e=>setRole(e.target.value)}><option value='admin'>Administrador</option><option value='contador'>Contador</option><option value='financeiro'>Financeiro</option><option value='comercial'>Comercial</option><option value='visualizacao'>Visualização</option></select><button className='blueBtn' disabled={busy}><Plus size={15}/>{busy?'Enviando...':'Convidar'}</button></form>
-  <Table headers={['Usuário','Função','Status de conta','Aprovação']} rows={rows.map(r=>[r.profile?.full_name||r.user_id,r.role,r.profile?.status||'active',label(r.profile?.approval_status||'pending')])}/>
+  {!canApprove&&<Table headers={['Usuário','Função','Status de conta','Aprovação']} rows={rows.map(r=>[r.profile?.full_name||r.user_id,r.role,r.profile?.status||'active',label(r.profile?.approval_status||'pending')])}/>}
  </ModuleShell>
 }
 
