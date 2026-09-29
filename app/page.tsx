@@ -79,7 +79,7 @@ function Workspace({session,membership}:{session:any,membership:any}){
  {section==='Canais de Venda'&&<ChannelsModule companyId={companyId}/>} 
  {section==='Relatórios'&&<ReportsModule companyId={companyId}/>} 
  {section==='Empresas'&&<CompanyModule company={company}/>} 
- {section==='Usuários'&&<UsersModule companyId={companyId} isMaster={membership.role==='super_admin'}/>} 
+ {section==='Usuários'&&<UsersModule companyId={companyId} currentRole={membership.role}/>} 
  {section==='Configurações'&&<SettingsModule company={company}/>}
  </section></main></div>
 }
