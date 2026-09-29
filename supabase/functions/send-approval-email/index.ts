@@ -84,16 +84,17 @@ Deno.serve(async(req)=>{
   <div style="max-width:620px;margin:32px auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e8edf5">
     <div style="background:#0f66e8;padding:28px 32px;color:#ffffff">
       <div style="font-size:14px;opacity:.9">Margem de Contribuição</div>
-      <div style="font-size:24px;font-weight:700;margin-top:6px">Aprovação concluída com sucesso</div>
+      <div style="font-size:24px;font-weight:700;margin-top:6px">Seu acesso foi aprovado 🎉</div>
     </div>
     <div style="padding:32px">
       <p style="font-size:16px;line-height:1.6;margin:0 0 18px">Olá, <strong>${esc(String(name))}</strong>.</p>
-      <p style="font-size:16px;line-height:1.6;margin:0 0 18px">Seu acesso à empresa <strong>${esc(String(companyName))}</strong> foi aprovado com sucesso.</p>
+      <p style="font-size:16px;line-height:1.6;margin:0 0 18px">Boas-vindas! Seu cadastro foi aprovado com sucesso para acessar a empresa <strong>${esc(String(companyName))}</strong>.</p>
       <div style="background:#f7f9fc;border:1px solid #e6ebf2;border-radius:10px;padding:18px;margin:22px 0">
         <div style="font-size:13px;color:#64748b">Perfil liberado</div>
         <div style="font-size:16px;font-weight:700;margin-top:4px">${esc(role)}</div>
       </div>
-      <p style="font-size:16px;line-height:1.6;margin:0 0 24px">Você já pode acessar normalmente a plataforma.</p>
+      <p style="font-size:16px;line-height:1.6;margin:0 0 18px">A partir de agora, você já pode entrar na plataforma e utilizar os recursos disponíveis para o seu perfil.</p>
+      <p style="font-size:14px;line-height:1.6;color:#64748b;margin:0 0 24px">Se você não esperava esta liberação, entre em contato com o administrador da empresa.</p>
       <a href="https://custo.rrestrategiaperformance.com.br/" style="display:inline-block;background:#0f66e8;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:8px">Acessar plataforma</a>
     </div>
   </div>
@@ -109,7 +110,7 @@ Deno.serve(async(req)=>{
       body:JSON.stringify({
         from,
         to:[recipient],
-        subject:"Aprovação concluída com sucesso",
+        subject:"Acesso aprovado — Bem-vindo à Margem de Contribuição",
         html
       })
     });
