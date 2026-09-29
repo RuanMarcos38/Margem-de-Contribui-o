@@ -150,8 +150,17 @@ export function UsersModule({companyId,currentRole='visualizacao'}:{companyId:st
    ?supabase.rpc('set_user_approval',{target_user:userId,p_status:status})
    :supabase.rpc('set_company_user_approval',{target_company:companyId,target_user:userId,p_status:status});
   const{error}=await request;
+  if(error){setActionUser('');return alert(error.message);}
+  if(status==='approved'){
+   const{data:mailData,error:mailError}=await supabase.functions.invoke('send-approval-email',{body:{company_id:companyId,user_id:userId}});
+   if(mailError||!mailData?.ok){
+    setActionUser('');
+    await load();
+    return alert('Usuário aprovado, mas o e-mail de boas-vindas não foi enviado: '+(mailData?.error||mailError?.message||'falha no envio.'));
+   }
+   alert('Usuário aprovado com sucesso. E-mail de aprovação e boas-vindas enviado.');
+  }
   setActionUser('');
-  if(error)return alert(error.message);
   await load();
  }
  async function invite(e:any){e.preventDefault();setBusy(true);const{data,error}=await supabase.functions.invoke('invite-company-user',{body:{company_id:companyId,email,role}});setBusy(false);if(error)return alert(error.message);if(!data?.ok)return alert(data?.error||'Falha ao convidar usuário.');alert(data?.message||'Convite processado. O usuário precisará ser aprovado antes de acessar.');setEmail('');setRole('visualizacao');load()}
