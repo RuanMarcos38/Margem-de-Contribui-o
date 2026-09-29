@@ -125,31 +125,39 @@ export function CompanyModule({company}:{company:any}){
  return <ModuleShell title='Empresa' subtitle='Dados usados pelo restante do sistema.'><form className='card formGrid' onSubmit={save}>{Object.entries({name:'Nome',legal_name:'Razão social',tax_id:'CNPJ/CPF',state_code:'UF',city:'Cidade'}).map(([k,l])=><label key={k}><span>{l}</span><input value={(f as any)[k]} onChange={e=>setF({...f,[k]:e.target.value})}/></label>)}<div className='formAction'><button className='blueBtn'><Save size={15}/>Salvar empresa</button></div></form></ModuleShell>
 }
 
-export function UsersModule({companyId,isMaster=false}:{companyId:string;isMaster?:boolean}){
+export function UsersModule({companyId,currentRole='visualizacao'}:{companyId:string;currentRole?:string}){
  const[rows,setRows]=useState<any[]>([]),[approvals,setApprovals]=useState<any[]>([]),[email,setEmail]=useState(''),[role,setRole]=useState('visualizacao'),[busy,setBusy]=useState(false),[actionUser,setActionUser]=useState('');
- useEffect(()=>{load()},[companyId,isMaster]);
+ const isMaster=currentRole==='super_admin';
+ const canApprove=isMaster||currentRole==='admin';
+ useEffect(()=>{load()},[companyId,currentRole]);
  async function load(){
   const{data:m}=await supabase.from('memberships').select('*').eq('company_id',companyId);
   const ids=(m||[]).map(x=>x.user_id);
   const{data:p}=ids.length?await supabase.from('profiles').select('id,full_name,job_title,status,approval_status').in('id',ids):{data:[] as any[]};
   setRows((m||[]).map(x=>({...x,profile:(p||[]).find(y=>y.id===x.user_id)})));
-  if(isMaster){
-   const{data,error}=await supabase.rpc('list_user_approvals');
-   if(error)console.error(error);
-   setApprovals(data||[]);
+  if(canApprove){
+   const request=isMaster
+    ?supabase.rpc('list_user_approvals')
+    :supabase.rpc('list_company_user_approvals',{target_company:companyId});
+   const{data,error}=await request;
+   if(error){console.error(error);setApprovals([]);}
+   else setApprovals(data||[]);
   }else setApprovals([]);
  }
  async function setApproval(userId:string,status:'approved'|'blocked'){
   setActionUser(userId);
-  const{error}=await supabase.rpc('set_user_approval',{target_user:userId,p_status:status});
+  const request=isMaster
+   ?supabase.rpc('set_user_approval',{target_user:userId,p_status:status})
+   :supabase.rpc('set_company_user_approval',{target_company:companyId,target_user:userId,p_status:status});
+  const{error}=await request;
   setActionUser('');
   if(error)return alert(error.message);
   await load();
  }
- async function invite(e:any){e.preventDefault();setBusy(true);const{data,error}=await supabase.functions.invoke('invite-company-user',{body:{company_id:companyId,email,role}});setBusy(false);if(error)return alert(error.message);if(!data?.ok)return alert(data?.error||'Falha ao convidar usuário.');alert('Convite enviado. O usuário ainda precisará da aprovação do Administrador Master para acessar.');setEmail('');setRole('visualizacao');load()}
+ async function invite(e:any){e.preventDefault();setBusy(true);const{data,error}=await supabase.functions.invoke('invite-company-user',{body:{company_id:companyId,email,role}});setBusy(false);if(error)return alert(error.message);if(!data?.ok)return alert(data?.error||'Falha ao convidar usuário.');alert(data?.message||'Convite processado. O usuário precisará ser aprovado antes de acessar.');setEmail('');setRole('visualizacao');load()}
  const label=(s:string)=>s==='approved'?'Aprovado':s==='blocked'?'Bloqueado':'Pendente';
- return <ModuleShell title='Usuários' subtitle={isMaster?'Gerencie os usuários da empresa e autorize novos cadastros da plataforma.':'Usuários vinculados à empresa e seus níveis de acesso.'}>
-  {isMaster&&<><div className='notice'><ShieldCheck size={18}/><span>Administrador Master: novos cadastros não acessam a ferramenta até serem aprovados aqui.</span></div>
+ return <ModuleShell title='Usuários' subtitle={canApprove?'Gerencie os usuários da empresa e aprove os convidados antes do acesso.':'Usuários vinculados à empresa e seus níveis de acesso.'}>
+  {canApprove&&<><div className='notice'><ShieldCheck size={18}/><span>{isMaster?'Administrador Master: aprove ou bloqueie os cadastros da plataforma.':'Administrador: aprove ou bloqueie os usuários convidados desta empresa.'}</span></div>
   <Table headers={['Cadastro','E-mail','Perfil','Status','Ações']} rows={approvals.map(r=>[
    new Date(r.created_at).toLocaleString('pt-BR'),
    r.email||'—',
